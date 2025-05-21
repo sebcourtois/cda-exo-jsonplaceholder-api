@@ -1,4 +1,4 @@
-import './style.css'
+import "./style.css";
 
 type PostData = {
     id: number,
@@ -7,9 +7,7 @@ type PostData = {
     userId: number
 }
 
-type PostFormData = { "title"?: string, "body"?: string }
-
-type FieldElements = {
+type FieldDisplayEditor = {
     editor: HTMLInputElement | HTMLTextAreaElement | null,
     display: HTMLInputElement | HTMLTextAreaElement | null
 }
@@ -24,11 +22,10 @@ function renderPostElem(postData: PostData) {
     const html = `
 <article class="item" id="post_${postData.id}">
     <div class="item-data">
-        <h2 class="item-field-value" data-editor-name="item_label_editor">${postData.title}</h2>
-        <input class="item-field-editor hidden" type="text" name="item_label_editor" data-item-field-name="title">
-        <p class="item-field-value" data-editor-name="item_text_editor">${postData.body}</p>
-        <textarea class="item-field-editor hidden" name="item_text_editor" data-item-field-name="body"
-        rows="4" cols="50">        
+        <h2 class="item-field-value" data-editor-name="post_title_editor">${postData.title}</h2>
+        <input class="item-field-editor hidden" type="text" name="post_title_editor" data-item-field-name="title">
+        <p class="item-field-value" data-editor-name="post_body_editor">${postData.body}</p>
+        <textarea class="item-field-editor hidden" name="post_body_editor" data-item-field-name="body" rows="4" cols="50">
         </textarea>
     </div>
     <button class="saving-button hidden" data-item-id="${postData.id}">Save</button>
@@ -36,59 +33,64 @@ function renderPostElem(postData: PostData) {
     <button class="removal-button" data-item-id="${postData.id}">Delete</button>
 </article>
     `.trim();
-    const item_template = document.createElement("template")
-    item_template.innerHTML = html
-    return item_template.content.firstElementChild as HTMLElement
+    const item_template = document.createElement("template");
+    item_template.innerHTML = html;
+    return item_template.content.firstElementChild as HTMLElement;
 }
 
-function onSaveButtonClicked(event: MouseEvent) {
-    if (!(event.target instanceof HTMLElement)) return
+async function onSaveButtonClicked(event: MouseEvent) {
+    if (!(event.target instanceof HTMLElement)) return;
 
     const savingButton = event.target;
-    const itemId = parseInt(savingButton.dataset.itemId!)
-    const itemElem = document.getElementById(`post_${itemId}`)!
+    const itemId = parseInt(savingButton.getAttribute("data-item-id")!);
+    const itemElem = document.getElementById(`post_${itemId}`)!;
 
-    const postData: PostData = BLOG_POSTS.get(itemId)!
+    // const postData: PostData = BLOG_POSTS.get(itemId)!;
 
-    const formData: any = {}
-    const editableFieldElements: FieldElements = {editor: null, display: null}
-    const formElements: any = {}
-    const editableFields: Array<keyof PostData> = ["title", "body"]
-    for (let fieldName of editableFields) {
-        let selector = `.item-field-editor[data-item-field-name=${fieldName}]`
-        const fieldEditor: HTMLInputElement | null = itemElem.querySelector(selector)
-        if (!fieldEditor) continue
-        editableFieldElements.editor = fieldEditor
-
-        const editorName = fieldEditor.name
-        selector = `.item-field-value[item_label_editor=${editorName}]`
-        editableFieldElements.display = itemElem.querySelector(selector)
-
-        formData[fieldName] = fieldEditor.value
-        formElements[fieldName] = editableFieldElements
-    }
-    postData.title = formData["title"]
-    postData.body = formData["body"]
-
-    // saveItemsDb();
+    const formData: any = {};
+    const formElements: any = {};
+    const editableFields: Array<keyof PostData> = ["title", "body"];
 
     for (let fieldName of editableFields) {
+        const editableFieldElements: FieldDisplayEditor = {editor: null, display: null};
+        formElements[fieldName] = editableFieldElements;
 
+        const fieldEditor: HTMLInputElement | null = itemElem.querySelector(
+            `.item-field-editor[data-item-field-name=${fieldName}]`,
+        );
+        if (!fieldEditor) continue;
+
+        editableFieldElements.editor = fieldEditor;
+        editableFieldElements.display = itemElem.querySelector(
+            `.item-field-value[data-editor-name=${fieldEditor.name}]`,
+        );
+        formData[fieldName] = fieldEditor.value.toString();
     }
+    const resp = await fetch(
+        `https://jsonplaceholder.typicode.com/posts/${itemId}`, {
+            method: "PATCH",
+            body: JSON.stringify({
+                title: formData["title"],
+                body: formData["body"],
+            }),
+            headers: {
+                "Content-type": "application/json; charset=UTF-8",
+            },
+        });
+    const postData: PostData = await resp.json();
+    BLOG_POSTS.set(postData.id, postData);
+    console.log(postData);
+    for (let fieldName of editableFields) {
+        const editableFieldElements = formElements[fieldName];
+        const fieldEditor = editableFieldElements.editor;
+        const fieldDisplay = editableFieldElements.display;
 
-    const fieldElements = itemElem.querySelectorAll(".item-field-value");
-    for (let fieldElem of fieldElements) {
-        let editorName = fieldElem.getAttribute("data-editor-name");
-        if (editorName === undefined) continue;
+        if (fieldDisplay) fieldDisplay.textContent = postData[fieldName];
 
-        let editorElem = itemElem.querySelector(`[name=${editorName}]`);
-        if (editorElem === null) continue;
-
-        let fieldName = editorElem.getAttribute("data-item-field-name")!;
-        fieldElem.textContent = postData[fieldName as keyof PostData];
-
-        editorElem.classList.add("hidden");
-        fieldElem.classList.remove("hidden");
+        if (fieldEditor && fieldDisplay) {
+            fieldEditor.classList.add("hidden");
+            fieldDisplay.classList.remove("hidden");
+        }
     }
     const editingButton = itemElem.querySelector(".editing-button")!;
     editingButton.classList.remove("hidden");
@@ -98,19 +100,19 @@ function onSaveButtonClicked(event: MouseEvent) {
 function onEditButtonClicked(event: MouseEvent) {
     if (event.target instanceof HTMLElement) {
         const editingButton = event.target;
-        const itemId = editingButton.dataset.itemId!;
-        console.log(`post_${itemId}`)
+        const itemId = editingButton.getAttribute("data-item-id")!;
+        // console.log(`post_${itemId}`)
         const itemElem = document.getElementById(`post_${itemId}`)!;
-        console.log(itemElem)
-        editItemElem(itemElem)
+        // console.log(itemElem)
+        editItemElem(itemElem);
     }
 }
 
 function appendItemElem(itemElem: HTMLElement, parentElem: HTMLElement, insertAsFirst: boolean = false) {
     if (insertAsFirst) {
-        parentElem.insertAdjacentElement("afterbegin", itemElem)
+        parentElem.insertAdjacentElement("afterbegin", itemElem);
     } else {
-        parentElem.appendChild(itemElem)
+        parentElem.appendChild(itemElem);
     }
 
     // const removalButton: HTMLButtonElement = itemElem.querySelector(".removal-button")!;
@@ -151,23 +153,33 @@ function editItemElem(itemElem: HTMLElement) {
     }
 }
 
-const BLOG_POSTS = await fetchPosts()
+const BLOG_POSTS = await fetchPosts();
 
-const itemsGroupElem: HTMLElement = document.querySelector("#items_group")!;
+const postsSectionElem: HTMLElement = document.querySelector("#items_group")!;
 for (let postData of BLOG_POSTS.values()) {
-    appendItemElem(renderPostElem(postData), itemsGroupElem)
+    appendItemElem(renderPostElem(postData), postsSectionElem);
 }
 
-function onAddItemClicked() {
-    const newPostData: PostData = {
-        id: -1,
-        userId: -1,
-        title: "New Post",
-        body: "",
-    }
-    const newPostElem = renderPostElem(newPostData)
-    appendItemElem(newPostElem, itemsGroupElem, true)
-    editItemElem(newPostElem)
+async function onAddItemClicked() {
+    const resp = await fetch(
+        "https://jsonplaceholder.typicode.com/posts", {
+            method: "POST",
+            body: JSON.stringify({
+                title: "New Post",
+                body: "",
+                userId: 1,
+            }),
+            headers: {
+                "Content-type": "application/json; charset=UTF-8",
+            },
+        });
+    const newPostData: PostData = await resp.json();
+    console.log("new post", newPostData);
+    BLOG_POSTS.set(newPostData.id, newPostData);
+
+    const newPostElem = renderPostElem(newPostData);
+    appendItemElem(newPostElem, postsSectionElem, true);
+    editItemElem(newPostElem);
 }
 
 const addItemBtn: HTMLButtonElement = document.querySelector("#add_item_button")!;
