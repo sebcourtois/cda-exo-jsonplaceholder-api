@@ -1,0 +1,39 @@
+* {
+    box-sizing: border-box;
+}
+
+.container {
+    max-width: 600px;
+    height: auto;
+    border: dimgrey solid 2px;
+    border-radius: 6px;
+    margin-inline: auto;
+    margin-block: 50px;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+}
+
+section, article {
+    border: 1px solid black;
+    border-radius: 6px;
+}
+
+.items-group {
+    margin: 6px;
+}
+
+.item {
+    margin: 6px;
+    padding: 6px;
+}
+
+.item-field-editor {
+    display: block;
+    margin-top: 16px;
+    margin-bottom: 16px;
+}
+
+.hidden {
+    display: none;
+}
