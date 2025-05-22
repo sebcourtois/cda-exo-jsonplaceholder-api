@@ -77,9 +77,11 @@ async function onSaveButtonClicked(event: MouseEvent) {
                 "Content-type": "application/json; charset=UTF-8",
             },
         });
+
     const postData: PostData = await resp.json();
     BLOG_POSTS.set(postData.id, postData);
     console.log(postData);
+
     for (let fieldName of editableFields) {
         const editableFieldElements = formElements[fieldName];
         const fieldEditor = editableFieldElements.editor;
