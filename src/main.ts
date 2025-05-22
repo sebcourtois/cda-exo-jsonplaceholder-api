@@ -108,6 +108,29 @@ function onEditButtonClicked(event: MouseEvent) {
     }
 }
 
+async function onRemoveButtonClicked(event: MouseEvent) {
+    if (event.target instanceof HTMLElement) {
+        const clickedButton = event.target;
+        let itemId = parseInt(clickedButton.getAttribute("data-item-id")!);
+        if (!itemId) return;
+
+        if (BLOG_POSTS.has(itemId)) {
+            BLOG_POSTS.delete(itemId);
+            const resp = await fetch(
+                `https://jsonplaceholder.typicode.com/posts/${itemId}`, {
+                    method: "DELETE",
+                });
+            const json = await resp.json();
+            console.log(json);
+        }
+
+        const itemElem = document.getElementById(`post_${itemId}`);
+        if (itemElem) {
+            itemElem.remove();
+        }
+    }
+}
+
 function appendItemElem(itemElem: HTMLElement, parentElem: HTMLElement, insertAsFirst: boolean = false) {
     if (insertAsFirst) {
         parentElem.insertAdjacentElement("afterbegin", itemElem);
@@ -115,11 +138,8 @@ function appendItemElem(itemElem: HTMLElement, parentElem: HTMLElement, insertAs
         parentElem.appendChild(itemElem);
     }
 
-    // const removalButton: HTMLButtonElement = itemElem.querySelector(".removal-button")!;
-    // removalButton.addEventListener("click", onRemoveButtonClicked);
-    //
-    // const moveButton: HTMLButtonElement = itemElem.querySelector(".page-move-button")!;
-    // moveButton.addEventListener("click", onMoveButtonClicked);
+    const removalButton: HTMLButtonElement = itemElem.querySelector(".removal-button")!;
+    removalButton.addEventListener("click", onRemoveButtonClicked);
 
     const editButton: HTMLButtonElement = itemElem.querySelector(".editing-button")!;
     editButton.addEventListener("click", onEditButtonClicked);
